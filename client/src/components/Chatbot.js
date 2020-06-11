@@ -7,7 +7,6 @@ import { v4 as uuid } from 'uuid';
 
 import Message from './Message';
 
-
 const cookies = new Cookies();
 
 class Chatbot extends Component {
@@ -18,6 +17,8 @@ class Chatbot extends Component {
         super(props);
         // This binding is necessary to make `this` work in the callback
         this._handleInputKeyPress = this._handleInputKeyPress.bind(this);
+        //this._handleQuickReplyPayload = this._handleQuickReplyPayload.bind(this);
+
         this.hide = this.hide.bind(this);
         this.show = this.show.bind(this);
 
@@ -53,9 +54,13 @@ class Chatbot extends Component {
 
     }
 
-//    componentDidMount() {
-//        this.df_event_query('Welcome');
-//    }
+    componentDidMount() {
+        let message = {
+            speaks: 'bot',
+            text: 'How can I help you?'
+        };
+        this.setState({messages: [message]})
+    }
 
     componentDidUpdate() {
         this.messagesEnd.scrollIntoView({ behaviour: "smooth"});
@@ -76,29 +81,11 @@ class Chatbot extends Component {
         this.setState({showBot: false});
     }
 
-//    renderCards(cards) {
-//        return cards.map((card, i) => <Card key={i} payload={card.structValue}/>);
-//    }
-
     renderOneMessage(message, i) {
-        if (message.msg && message.msg.text && message.msg.text.text) {
-            return <Message key={i} speaks={message.speaks} text={message.msg.text.text} />;
-        } else if(message.msg && message.msg.payload.fields.cards){
-            return <div key={i}>
-                <div className="card-panel grey lighten-5 z-depth-1">
-                    <div style={{ overflow: 'hidden'}}>
-                        <div className="col s2">
-                            <a href="/" className="btn-floating btn-large waves-effect waves-light"><i className="fa fa-robot"></i></a>
-                        </div>
-                        <div style={{overflow: 'auto', overflowY: 'scroll'}}>
-                            <div style={{height: 300, width: message.msg.payload.fields.cards.listValue.values.length * 270}}>
-                                {this.renderCards(message.msg.payload.fields.cards.listValue.values)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        if (message.text) {
+            return <Message key={i} speaks={message.speaks} text={message.text}/>;
         }
+        return null;
     }
 
 
@@ -112,10 +99,34 @@ class Chatbot extends Component {
         }
     }
 
+    requestAnswer = (question) => {
 
-    _handleInputKeyPress (e) {
+        let message = {
+            speaks: 'me',
+            text: question
+        };
+
+        this.setState({messages: [...this.state.messages, message]}, () => {
+            let body = {
+                question: question,
+                history: []
+            };
+
+            axios.post("/qa", body).then((response) => {
+
+                let answer = response.data.answer;
+                message = {
+                    speaks: 'bot',
+                    text: answer
+                };
+                this.setState({messages: [...this.state.messages, message]});
+            });
+        });
+    };
+
+    _handleInputKeyPress(e) {
         if (e.key === 'Enter') {
-            this.df_text_query(e.target.value);
+            this.requestAnswer(e.target.value);
             e.target.value = '';
         }
     }
@@ -129,7 +140,7 @@ class Chatbot extends Component {
                         <div className="nav-wrapper teal lighten-2">
                             <a href="/" className="brand-logo">Chatbot</a>
                             <ul id="nav-mobile" className="right hide-on-med-and-down">
-                                <li><a href="/" onClick={this.hide}><i className="fa fa-times"></i></a></li>
+                                <li><a href="/" onClick={this.hide}><i className="fa fa-times"/></a></li>
                             </ul>
                         </div>
                     </nav>
@@ -142,6 +153,7 @@ class Chatbot extends Component {
                     <div className="col s12">
                         <input style={{ margin: 0, paddingLeft: '1%', paddingRight: '1%', width: '98%'}} placeholder="Type a message:" type="text" ref={(input) => { this.talkInput = input; }} onKeyPress={this._handleInputKeyPress} />
                     </div>
+
                 </div>
             );
         } else {
@@ -155,7 +167,7 @@ class Chatbot extends Component {
                 //             </ul>
                 //         </div>
                 //     </nav> */}
-                <a href="#" style={{}} onClick={this.show} class="btn-floating btn-large waves-effect waves-light teal lighten-2"><i class="fa fa-comments"></i></a>
+                <a href="#" style={{}} onClick={this.show} className="btn-floating btn-large waves-effect waves-light teal lighten-2"><i className="fa fa-comments"/></a>
                     <div ref={(el) => { this.messagesEnd = el; }}
                             style={{ float: 'left', clear: "both"}}>
                     </div>

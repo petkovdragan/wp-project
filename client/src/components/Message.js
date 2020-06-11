@@ -8,7 +8,7 @@ const Message = (props) => {
                 <div className="row valign-wrapper">
                     {props.speaks==='bot' &&
                     <div className="col s2">
-                        <a href="/" className="btn-floating btn-large waves-effect waves-light"><i className="fa fa-robot"></i></a>
+                        <a href="/" className="btn-floating btn-large waves-effect waves-light"><i className="fa fa-robot"/></a>
                     </div>
                     }
                     <div className="col s10">
