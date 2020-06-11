@@ -16,7 +16,7 @@ class QA(Resource):
     def post(self):
         args = parser.parse_args()
         print('in qa request', args['question'], args['history'])
-        answer = qa_model.get_answer(question=args['question'], history=args['history'])
+        answer = qa_model.get_answer(question=args['question'])
         return {"answer": answer}
 
 
@@ -24,16 +24,16 @@ class Conv(Resource):
 
     def post(self):
         args = parser.parse_args()
-        print('in qa request', args['question'], args['history'])
-        answer = conv_model.get_answer(question=args['question'], history=args['history'])
+        print('in conv request', args['question'], args['history'])
+        answer = conv_model.get_answer(question=args['question'])
         return {"answer": answer}
 
 
 class Combined(Resource):
     def post(self):
         args = parser.parse_args()
-        print('in qa request', args['question'], args['history'])
-        answer = combined_model.get_answer(question=args['question'], history=args['history'])
+        print('in comb request', args['question'], args['history'])
+        answer = combined_model.get_answer(question=args['question'])
         return {"answer": answer}
 
 
