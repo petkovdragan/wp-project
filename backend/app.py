@@ -2,9 +2,12 @@ from flask import Flask
 from flask_restful import Resource, Api
 from flask_restful import reqparse
 from backend.bots import qa_model, conv_model, combined_model
+from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
 api = Api(app)
+
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 parser = reqparse.RequestParser()
 parser.add_argument('question')
