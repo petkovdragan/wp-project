@@ -56,8 +56,14 @@ class SimilarityCorpus:
         self.embedder = SentenceTransformer('bert-base-nli-mean-tokens')
 
         self.corpus = self.questions
-        #self.corpus_embeddings = self.embedder.encode(self.corpus)
-        self.corpus_embeddings = self.load_embeddings("../models/corpus/corpus_embeddings.bin")
+
+        # if it can't load the embeddings it will encode the corpus
+        # and the it will save the embeddings and the next time it will be able to load them
+        try:
+            self.corpus_embeddings = self.load_embeddings("../models/corpus/corpus_embeddings.bin")
+        except Exception as e:
+            self.corpus_embeddings = self.embedder.encode(self.corpus)
+            self.save_embeddings("../models/corpus/corpus_embeddings.bin")
 
     def save_embeddings(self, filename):
         binary_file = open(filename, mode='wb')
