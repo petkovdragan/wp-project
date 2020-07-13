@@ -112,7 +112,7 @@ class Chatbot extends Component {
                 history: []
             };
 
-            axios.post("/qa", body).then((response) => {
+            axios.post("/comb", body).then((response) => {
 
                 let answer = response.data.answer;
                 message = {

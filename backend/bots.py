@@ -1,31 +1,12 @@
 from simpletransformers.conv_ai import ConvAIModel
-from simpletransformers.question_answering import QuestionAnsweringModel
 from simpletransformers.conv_ai.conv_ai_utils import get_dataset
 import torch
 import random
-#import apex
 
-context = "Liverpool Football Club is a professional football club in Liverpool, England, that competes in the Premier League,\
-          the top tier of English football. The club has won six European Cups, more than any other English club,\
-          three UEFA Cups, four UEFA Super Cups (both also English records), one FIFA Club World Cup, eighteen League titles,\
-          seven FA Cups, a record eight League Cups and fifteen FA Community Shields."
-
-
-class QACustomized(QuestionAnsweringModel):
-
-    def get_answer(self, question):
-        tmp = self.predict([
-            {
-                'context': context,
-                'qas': [
-                    {'id': '0', 'question': question},
-                ]
-            }
-        ], n_best_size=1)
-
-        answer = tmp[0]['answer']
-
-        return answer
+from sentence_transformers import SentenceTransformer
+import scipy.spatial
+import json
+import pickle
 
 
 class ConvAICustomized(ConvAIModel):
@@ -39,7 +20,7 @@ class ConvAICustomized(ConvAIModel):
         self._move_model_to_device()
 
         if personality == []:
-            personality = ["i know about drugs .", "i like medicine .", "i'm a pharmacist ."]
+            personality = ["i like medicine .", "i'm a doctor ."]
 
         if not personality:
             dataset = get_dataset(
@@ -64,37 +45,72 @@ class ConvAICustomized(ConvAIModel):
         return out_text
 
 
-class CombinedBots:
+class SimilarityCorpus:
 
-    def __init__(self, qa_model, conv_model):
-        self.qa_model = qa_model
-        self.conv_model = conv_model
+    def __init__(self):
+        with open('../data/final.json') as f:
+            datastore = json.load(f)
+            self.database = dict([(obj["q"], obj["a"]) for obj in datastore])
+            self.questions = list(self.database.keys())
+
+        self.embedder = SentenceTransformer('bert-base-nli-mean-tokens')
+
+        self.corpus = self.questions
+        #self.corpus_embeddings = self.embedder.encode(self.corpus)
+        self.corpus_embeddings = self.load_embeddings("../models/corpus/corpus_embeddings.bin")
+
+    def save_embeddings(self, filename):
+        binary_file = open(filename, mode='wb')
+        pickle.dump(self.corpus_embeddings, binary_file)
+
+    def load_embeddings(self, filename):
+        binary_file = open(filename, mode='rb')
+        return pickle.load(binary_file)
 
     def get_answer(self, question):
-        tmp = self.qa_model.predict([
-            {
-                'context': context,
-                'qas': [
-                    {'id': '0', 'question': question},
-                ]
-            }
-        ])
+        queries = [question]
+        query_embeddings = self.embedder.encode(queries)
 
-        answer = tmp[0]['answer']
+        distances = scipy.spatial.distance.cdist(query_embeddings, self.corpus_embeddings, "cosine")[0]
 
-        if answer is None or len(answer) == 0:
-            answer = self.conv_model.get_answer(question=question)
+        results = zip(range(len(distances)), distances)
+        results = min(results, key=lambda x: x[1])
+
+        print(results)
+
+        best_index = results[0]
+        best_distance = results[1]
+
+        best_distance = round(best_distance, 6)
+        if 1.0 - best_distance >= 0.8:
+            return self.database[self.corpus[best_index]]
+
+        return "I can't answer that question"
+
+
+class CombinedModels:
+
+    def __init__(self, similarity, conversational):
+        self.sim = similarity
+        self.conv = conversational
+
+    def get_answer(self, question):
+        answer = "I can't answer that question"
+        try:
+            answer = self.sim.get_answer(question)
+        finally:
+            if answer == "I can't answer that question":
+                answer = self.conv.get_answer(question=question)
 
         return answer
 
 
 conv_model = ConvAICustomized("gpt", "../models/conv_model", use_cuda=False)
-qa_model = QACustomized('bert', "../models/qa-model", use_cuda=False)
-combined_model = CombinedBots(qa_model, conv_model)
+sim_model = SimilarityCorpus()
+combined_model = CombinedModels(sim_model, conv_model)
 
 if __name__ == "__main__":
     print(conv_model.get_answer("what is the best medicine for headache?"))
-    print(qa_model.get_answer("what has Liverpool FC won?"))
-    print(combined_model.get_answer("What is Liverpool FC?"))
     print(combined_model.get_answer("how to treat heparin-induced thrombocytopenia?"))
+    print(sim_model.get_answer("how to get monolids?"))
 
